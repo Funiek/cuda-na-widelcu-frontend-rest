@@ -1,0 +1,126 @@
+﻿@model CudaNaWidelcuFrontend.Controllers.RecipeController.RecipeModelView
+
+@{
+    ViewData["Title"] = "Detail";
+}
+
+<link rel="stylesheet" href="~/css/stars.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" />
+
+<script src="~/js/stars.js" defer></script>
+<script src="~/js/pdf.js" defer></script>
+
+<script>
+    let RecipeId = @Model.Id
+    let RecipeName = '@Model.Name'
+</script>
+
+<div>
+    <h4>Strona produktu - @Model.Name</h4>
+    @{
+        var photoName = Model.Name + ".jpeg";
+    }
+    
+    <hr />
+    <div class="row">
+        <div class="col-sm-7">
+            <img class="detail-img" src="~/img/@photoName" alt="@Model.Name" />
+        </div>
+        <div class="col-sm-5 detail-props">
+            <dl class="row">
+                <dt class="col-sm-4">
+                    Nazwa przepisu:
+                </dt>
+                <dd class="col-sm-8">
+                    @Html.DisplayFor(model => model.Name)
+                </dd>
+                <dt class="col-sm-4">
+                    Kategoria:
+                </dt>
+                <dd class="col-sm-8">
+                    @Html.DisplayFor(model => model.Category)
+                </dd>
+                <dt class="col-sm-4">
+                    Ocena przepisu:
+                </dt>
+                <dd class="col-sm-8">
+                    @Html.DisplayFor(model => model.Rating)
+                </dd>
+                <dt class="col-sm-4">
+                    Liczba ocen:
+                </dt>
+                <dd class="col-sm-8">
+                    @Html.DisplayFor(model => model.CountVotes)
+                </dd>
+            </dl>
+            @if (Model.Products is not null)
+            {
+                <h5>Lista produktów</h5>
+                <ol>
+                    @foreach (var product in Model.Products)
+                    {
+                        <li>
+                            @Html.Raw($"{product.name}\t{product.qty}\t{product.measure}")
+                    </li>
+                }
+                </ol>
+            }
+        </div>
+    </div>
+    
+</div>
+<br />
+
+<div class="row detail-desc">
+    <h4>Opis produktu</h4>
+    <hr />
+    <div class="col-sm-12">
+        @Html.DisplayFor(model => model.Description)
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="wrapper">
+            <p id="message">Oceń przepis</p>
+            <div class="container vertical-center">
+                <div class="star-container inactive">
+                    <i class="fa-regular fa-star"></i>
+                    <span class="number">1</span>
+                </div>
+                <div class="star-container inactive">
+                    <i class="fa-regular fa-star"></i>
+                    <span class="number">2</span>
+                </div>
+                <div class="star-container inactive">
+                    <i class="fa-regular fa-star"></i>
+                    <span class="number">3</span>
+                </div>
+                <div class="star-container inactive">
+                    <i class="fa-regular fa-star"></i>
+                    <span class="number">4</span>
+                </div>
+                <div class="star-container inactive">
+                    <i class="fa-regular fa-star"></i>
+                    <span class="number">5</span>
+                </div>
+            </div>
+            <button id="submit" disabled>Wyślij</button>
+            <div id="submit-section" class="hide">
+                <p id="submit-message">Dziękujemy za ocenę!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<div class="nice-button" style="float:left; margin-right: 16px;">
+    <a style="text-decoration:none; color: #ffffff" asp-action="Index">Powrót</a>
+</div>
+<button id="pdfButton" style="float:left;" class="nice-button">Pobierz PDF</button>
+
+<div style="clear:both"></div>
+

@@ -1,0 +1,53 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+.detail-img {
+    width: 100%;
+}
+
+.detail-props {
+    border-left: 3px dashed #000;
+}
+
+.detail-desc {
+    padding-top: 10px;
+    margin-bottom: 24px;
+}
+
+.navbar-color {
+    background: linear-gradient(#fe3b5a, #fd7914);
+    color: #fff;
+}
+
+.navbar-item-text {
+    color: #fff !important;
+}
+
+.navbar-item-text:hover {
+    color: #eee !important;
+}
+
+.index-detail-btn {
+    color: grey;
+    text-decoration: none;
+}
+
+.index-detail-btn:hover {
+    color: dimgrey;
+}

@@ -1,0 +1,14 @@
+﻿
+.nice-button {
+    display: block;
+    position: relative;
+    background: linear-gradient(#fe3b5a, #fd7914);
+    border: none;
+    padding: 0.8em 2em;
+    color: #ffffff;
+    font-size: 0.8em;
+    border-radius: 2em;
+    margin: 1em auto 0 auto;
+    cursor: pointer;
+    text-decoration: none;
+}

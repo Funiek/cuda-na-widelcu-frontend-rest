@@ -1,0 +1,45 @@
+﻿@model IEnumerable<CudaNaWidelcuFrontend.Controllers.RecipeController.RecipeModelView>
+
+@{
+    ViewData["Title"] = "Cuda na Widelcu";
+}
+
+<h1>Lista przepisów</h1>
+
+@if(Model is not null)
+{
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                Przepis
+            </th>
+            <th>
+                Kategoria
+            </th>
+            <th>
+                Ocena
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Category)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Rating)
+            </td>
+            <td>
+                @Html.ActionLink("Szczegóły", "Detail", new {  id=item.Id  }, new { @class = "index-detail-btn" })
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+}
