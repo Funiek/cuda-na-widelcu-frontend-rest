@@ -1,7 +1,6 @@
 ﻿using CudaNaWidelcuFrontend.Models;
-using FileReference;
+using CudaNaWidelcuFrontend.Services;
 using Microsoft.AspNetCore.Mvc;
-using RecipeReference;
 using System.Diagnostics;
 using System.ServiceModel;
 using System.ServiceModel.Channels;
@@ -12,8 +11,8 @@ namespace CudaNaWidelcuFrontend.Controllers
     public class RecipeController : Controller
     {
         private readonly ILogger<RecipeController> _logger;
-        private readonly RecipeServiceClient _recipeService;
-        private readonly FileServiceClient _fileService;
+        private readonly RecipeService _recipeService;
+        private readonly FileService _fileService;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly Dictionary<Category, string> _categoryNames;
         private readonly MessageHeader _authHeader;
@@ -26,14 +25,14 @@ namespace CudaNaWidelcuFrontend.Controllers
             public double Rating { get; set; }
             public string? Description { get; set; }
             public double CountVotes { get; set; }
-            public Product[]? Products { get; set; }
+            public List<Product>? Products { get; set; }
         }
 
         public RecipeController(ILogger<RecipeController> logger, IWebHostEnvironment webHostEnvironment)
         {
             _logger = logger;
-            _recipeService = new RecipeServiceClient();
-            _fileService = new FileServiceClient();
+            _recipeService = new RecipeService();
+            _fileService = new FileService();
             _webHostEnvironment = webHostEnvironment;
             _categoryNames = new Dictionary<Category, string>
             {
@@ -51,28 +50,25 @@ namespace CudaNaWidelcuFrontend.Controllers
 
         public async Task<IActionResult> Index()
         {
-            Recipe[] recipes;
-            using (var scope = new OperationContextScope(_recipeService.InnerChannel))
-            {
-                OperationContext.Current.OutgoingMessageHeaders.Add(_authHeader);
-                var recipesResponse = await _recipeService.getRecipesAsync();
-                recipes = recipesResponse.@return;
-            }
+            var recipes = await _recipeService.GetRecipes();
             
             var modelViews = new List<RecipeModelView>();
 
-            foreach (var recipe in recipes)
+            if(recipes is not null)
             {
-                modelViews.Add(new RecipeModelView
+                foreach (var recipe in recipes)
                 {
-                    Id = recipe.id,
-                    Name = recipe.name,
-                    Category = _categoryNames[recipe.category],
-                    Rating = recipe.rating,
+                    modelViews.Add(new RecipeModelView
+                    {
+                        Id = recipe.Id,
+                        Name = recipe.Name,
+                        Category = _categoryNames[recipe.Category],
+                        Rating = recipe.Rating,
 
-                });
+                    });
+                }
             }
-
+            
             return View(modelViews);
         }
 
@@ -87,28 +83,20 @@ namespace CudaNaWidelcuFrontend.Controllers
                 _ => Category.BREAKFAST
             };
 
-            Recipe[] recipes;
-            using (var scope = new OperationContextScope(_recipeService.InnerChannel))
-            {
-                OperationContext.Current.OutgoingMessageHeaders.Add(_authHeader);
-                var recipesResponse = await _recipeService.getRecipesByCategoryAsync(category);
-                recipes = recipesResponse.@return;
-            }
-                
-            
+            var recipes = await _recipeService.getRecipesByCategoryAsync(category);
             var modelViews = new List<RecipeModelView>();
 
             foreach (var recipe in recipes)
             {
                 modelViews.Add(new RecipeModelView
                 {
-                    Id = recipe.id,
-                    Name = recipe.name,
-                    Category = _categoryNames[recipe.category],
-                    Rating = recipe.rating,
-                    CountVotes = recipe.countVotes,
-                    Description = recipe.description,
-                    Products = recipe.products
+                    Id = recipe.Id,
+                    Name = recipe.Name,
+                    Category = _categoryNames[recipe.Category],
+                    Rating = recipe.Rating,
+                    CountVotes = recipe.CountVotes,
+                    Description = recipe.Description,
+                    Products = recipe.Products
                 });
             }
 
@@ -117,56 +105,58 @@ namespace CudaNaWidelcuFrontend.Controllers
 
         public async Task<IActionResult> Detail(int id)
         {
-            Recipe recipe;
-            using (var scope = new OperationContextScope(_recipeService.InnerChannel))
+            try
             {
-                OperationContext.Current.OutgoingMessageHeaders.Add(_authHeader);
-                var recipeResponse = await _recipeService.getRecipeAsync(id);
-                recipe = recipeResponse.@return;
-            }
+                Recipe recipe = await _recipeService.getRecipeAsync(id);
+                string imageEndpoint = "";
 
-            var path = Path.Combine(_webHostEnvironment.WebRootPath, "img", recipe.name + ".jpeg");
+                if (recipe.Links is null) return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
 
-            if (recipe.image is null && recipe.name is not null && !System.IO.File.Exists(path))
-            {
-                using (var scope = new OperationContextScope(_fileService.InnerChannel))
+                foreach (var item in recipe.Links)
                 {
-                    OperationContext.Current.OutgoingMessageHeaders.Add(_authHeader);
-                    var imageInBytesResponse = await _fileService.downloadImageAsync(recipe.name);
-                    recipe.image = imageInBytesResponse.@return;
+                    if (item.Title == "image")
+                        imageEndpoint = item.Uri;
                 }
 
-                using (var ms = new MemoryStream(recipe.image))
+                var path = Path.Combine(_webHostEnvironment.WebRootPath, "img", recipe.Name + ".jpeg");
+
+                if (recipe.Image is null && recipe.Name is not null && !System.IO.File.Exists(path))
                 {
-                    using (var fs = new FileStream(path, FileMode.Create))
+                    var imageInByte = await _fileService.downloadImageAsync(imageEndpoint);
+                    recipe.Image = imageInByte;
+
+                    using (var ms = new MemoryStream(recipe.Image))
                     {
-                        ms.WriteTo(fs);
+                        using (var fs = new FileStream(path, FileMode.Create))
+                        {
+                            ms.WriteTo(fs);
+                        }
                     }
                 }
+
+                var modelView = new RecipeModelView
+                {
+                    Id = recipe.Id,
+                    Name = recipe.Name,
+                    Category = _categoryNames[recipe.Category],
+                    Rating = recipe.Rating,
+                    CountVotes = recipe.CountVotes,
+                    Description = recipe.Description,
+                    Products = recipe.Products
+                };
+
+                return View(modelView);
             }
-
-            var modelView = new RecipeModelView
+            catch (Exception ex)
             {
-                Id = recipe.id,
-                Name = recipe.name,
-                Category = _categoryNames[recipe.category],
-                Rating = recipe.rating,
-                CountVotes = recipe.countVotes,
-                Description = recipe.description,
-                Products = recipe.products
-            };
-
-            return View(modelView);
+                return View("Error", new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier, Message = ex.Message });
+            }
         }
 
         [HttpPost]
-        public void Rating(RatingData data)
+        public async void Rating(RatingData data)
         {
-            using (var scope = new OperationContextScope(_recipeService.InnerChannel))
-            {
-                OperationContext.Current.OutgoingMessageHeaders.Add(_authHeader);
-                _recipeService.rateRecipeAsync(data.RecipeId, data.Rating);
-            }
+            await _recipeService.rateRecipeAsync(data);
         }
 
         [HttpPost]
@@ -177,30 +167,21 @@ namespace CudaNaWidelcuFrontend.Controllers
             if (!System.IO.File.Exists(path))
             {
                 byte[] pdfInBytes;
-                Recipe recipe;
+                Recipe recipe = await _recipeService.getRecipeByNameAsync(data.Name);
+                StringBuilder stringBuilder = new StringBuilder();
 
-                using (var scope = new OperationContextScope(_recipeService.InnerChannel))
+                if (recipe.Products is not null)
                 {
-                    OperationContext.Current.OutgoingMessageHeaders.Add(_authHeader);
-                    var recipeResponse = await _recipeService.getRecipeByNameAsync(data.Name);
-                    recipe = recipeResponse.@return;
-                }
-
-                    StringBuilder stringBuilder = new StringBuilder();
-
-                    foreach (var product in recipe.products)
+                    foreach (var product in recipe.Products)
                     {
-                        stringBuilder.Append($"{product.name}: {product.qty} {product.measure};");
+                        stringBuilder.Append($"{product.Name}: {product.Qty} {product.Measure};");
                     }
-
-                    stringBuilder.Remove(stringBuilder.Length - 1, 1);
-
-                using (var scope = new OperationContextScope(_fileService.InnerChannel))
-                {
-                    var pdfResponse = await _fileService.downloadRecipeProductsPdfAsync(recipe.name, stringBuilder.ToString());
-                    pdfInBytes = pdfResponse.@return;
-
                 }
+                
+
+                stringBuilder.Remove(stringBuilder.Length - 1, 1);
+
+                pdfInBytes = await _fileService.downloadRecipeProductsPdfAsync(recipe.Name, stringBuilder.ToString());
 
                 using (var ms = new MemoryStream(pdfInBytes))
                 {
@@ -214,9 +195,9 @@ namespace CudaNaWidelcuFrontend.Controllers
 
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        public IActionResult Error(Exception ex)
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier, Message = ex.Message});
         }
     }
 }
